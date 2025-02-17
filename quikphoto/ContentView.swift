@@ -12,9 +12,11 @@ struct ContentView: View {
             PhotoGridView(assets: photoLibrary.assets,
                          selectedAsset: $selectedAsset)
                 .frame(minWidth: 300)
+                .id(selectedAsset?.localIdentifier ?? "no-selection") // Force view update
             
             if let asset = selectedAsset {
                 PhotoDetailView(asset: asset, onDelete: deleteAsset)
+                    .id(asset.localIdentifier) // Force view update when asset changes
             } else {
                 Text("Select a photo or video to view")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -43,10 +45,12 @@ struct ContentView: View {
         }) { success, error in
             if success {
                 DispatchQueue.main.async {
+                    if selectedAsset == asset {
+                        selectedAsset = nil
+                    }
                     if let index = photoLibrary.assets.firstIndex(of: asset) {
                         photoLibrary.assets.remove(at: index)
                     }
-                    selectedAsset = nil
                 }
             }
         }
