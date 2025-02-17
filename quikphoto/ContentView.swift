@@ -12,7 +12,6 @@ struct ContentView: View {
             PhotoGridView(assets: photoLibrary.assets,
                          selectedAsset: $selectedAsset)
                 .frame(minWidth: 300)
-                .id(selectedAsset?.localIdentifier ?? "no-selection") // Force view update
             
             if let asset = selectedAsset {
                 PhotoDetailView(asset: asset, onDelete: deleteAsset)

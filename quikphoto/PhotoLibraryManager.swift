@@ -37,23 +37,6 @@ class PhotoLibraryManager: ObservableObject {
         }
     }
     
-//    private func precalculateAssetSizes() {
-//        DispatchQueue.global(qos: .background).async { [weak self] in
-//            guard let self = self else { return }
-//            for asset in self.assets {
-//                let resources = PHAssetResource.assetResources(for: asset)
-//                if let resource = resources.first {
-//                    if let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong {
-//                        let sizeOnDisk = Int64(bitPattern: UInt64(unsignedInt64))
-//                        DispatchQueue.main.async {
-//                            self.assetSizes[asset.localIdentifier] = sizeOnDisk
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    
     private func precalculateAssetSizes() {
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
@@ -76,10 +59,7 @@ class PhotoLibraryManager: ObservableObject {
                     if sizeOnDisk > 0 {
                         DispatchQueue.main.async {
                             self.assetSizes[asset.localIdentifier] = sizeOnDisk
-//                            print("Cached size for asset \(asset.localIdentifier): \(sizeOnDisk)")
                         }
-                    } else {
-//                        print("Failed to get size for asset \(asset.localIdentifier)")
                     }
                 }
             }
