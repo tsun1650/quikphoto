@@ -2,7 +2,7 @@ import SwiftUI
 import Photos
 
 struct ContentView: View {
-    @StateObject private var photoLibrary = PhotoLibraryManager()
+    @EnvironmentObject var photoLibrary: PhotoLibraryManager
     @State private var selectedAsset: PHAsset?
     @State private var showingSimilarPhotos = false
     @State private var similarGroups: [[PHAsset]] = []
@@ -20,6 +20,18 @@ struct ContentView: View {
             } else {
                 Text("Select a photo or video to view")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .toolbar {
+            if !photoLibrary.isSizeCachingComplete {
+                ToolbarItem(placement: .status) {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Caching file sizes...")
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
         }
         .sheet(isPresented: $showingSimilarPhotos) {

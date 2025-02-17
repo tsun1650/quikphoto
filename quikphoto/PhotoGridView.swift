@@ -38,21 +38,44 @@ struct PhotoThumbnailView: View {
     @State private var image: Image?
     
     var body: some View {
-        Group {
-            if let image = image {
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                Color.gray
+        ZStack {
+            Group {
+                if let image = image {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Color.gray
+                }
+            }
+            .frame(width: 150, height: 150)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 3)
+            )
+            
+            if asset.mediaType == .video {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "play.circle.fill")
+                            .foregroundColor(.white)
+                            .padding(.leading, 5)
+                        Text(getDuration(asset))
+                            .foregroundColor(.white)
+                            .padding(.trailing, 5)
+                        Spacer()
+                    }
+                    .padding(2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(Color.black.opacity(0.7))
+                    )
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(width: 150, height: 150)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 3)
-        )
         .onAppear {
             loadImage()
         }
@@ -74,5 +97,13 @@ struct PhotoThumbnailView: View {
                 self.image = Image(nsImage: image)
             }
         }
+    }
+    
+    private func getDuration(_ asset: PHAsset) -> String {
+        guard asset.mediaType == .video else { return "" }
+        let seconds = Int(asset.duration)
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return String(format: "%d:%02d", minutes, remainingSeconds)
     }
 }

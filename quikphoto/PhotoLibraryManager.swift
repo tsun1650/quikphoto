@@ -13,8 +13,10 @@ import AVKit
 
 class PhotoLibraryManager: ObservableObject {
     @Published var assets: [PHAsset] = []
+    @Published var isSizeCachingComplete: Bool = false
     private let imageManager = PHImageManager.default()
-    
+    private var assetSizes: [String: Int64] = [:] 
+
     
     func requestAuthorization() {
         PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
@@ -31,7 +33,64 @@ class PhotoLibraryManager: ObservableObject {
         let fetchResult = PHAsset.fetchAssets(with: fetchOptions)
         DispatchQueue.main.async {
             self.assets = fetchResult.objects(at: IndexSet(0..<fetchResult.count))
+            self.precalculateAssetSizes()
         }
+    }
+    
+//    private func precalculateAssetSizes() {
+//        DispatchQueue.global(qos: .background).async { [weak self] in
+//            guard let self = self else { return }
+//            for asset in self.assets {
+//                let resources = PHAssetResource.assetResources(for: asset)
+//                if let resource = resources.first {
+//                    if let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong {
+//                        let sizeOnDisk = Int64(bitPattern: UInt64(unsignedInt64))
+//                        DispatchQueue.main.async {
+//                            self.assetSizes[asset.localIdentifier] = sizeOnDisk
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    
+    private func precalculateAssetSizes() {
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.isSizeCachingComplete = false
+            }
+
+            for asset in self.assets {
+                let resources = PHAssetResource.assetResources(for: asset)
+                if let resource = resources.first {
+                    var sizeOnDisk: Int64 = 0
+
+                
+                    // Fallback to value(forKey:) method
+                    if let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong {
+                        sizeOnDisk = Int64(bitPattern: UInt64(unsignedInt64))
+                    }
+                
+
+                    if sizeOnDisk > 0 {
+                        DispatchQueue.main.async {
+                            self.assetSizes[asset.localIdentifier] = sizeOnDisk
+//                            print("Cached size for asset \(asset.localIdentifier): \(sizeOnDisk)")
+                        }
+                    } else {
+//                        print("Failed to get size for asset \(asset.localIdentifier)")
+                    }
+                }
+            }
+
+            // Log total number of cached sizes
+            DispatchQueue.main.async {
+                self.isSizeCachingComplete = true
+            }
+        }
+        
+        DispatchQueue.global(qos: .background).async(execute: workItem)
     }
     
     func sortByDate() {
@@ -39,28 +98,11 @@ class PhotoLibraryManager: ObservableObject {
     }
     
     func sortBySize() {
-        // Create a dictionary to cache sizes
-        var assetSizes: [PHAsset: Int64] = [:]
-        
-        let group = DispatchGroup()
-        assets.forEach { asset in
-            group.enter()
-            
-            let resources = PHAssetResource.assetResources(for: asset)
-            var sizeOnDisk: Int64? = 0
-            if let resource = resources.first {
-                let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong
-                sizeOnDisk = Int64(bitPattern: UInt64(unsignedInt64!))
-                assetSizes[asset] = sizeOnDisk
+    assets.sort { first, second in
+                let firstSize = assetSizes[first.localIdentifier] ?? 0
+                let secondSize = assetSizes[second.localIdentifier] ?? 0
+                return firstSize > secondSize
             }
-            group.leave()
-        }
-        
-        group.notify(queue: .main) {
-            self.assets.sort { first, second in
-                return (assetSizes[first] ?? 0) > (assetSizes[second] ?? 0)
-            }
-        }
     }
     
     func findSimilarPhotos() async -> [[PHAsset]] {

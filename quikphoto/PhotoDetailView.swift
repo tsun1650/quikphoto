@@ -8,22 +8,37 @@
 
 import SwiftUI
 import Photos
+import AVKit
 
 struct PhotoDetailView: View {
     let asset: PHAsset
     let onDelete: (PHAsset) -> Void
     @State private var image: Image?
-    
+    @State private var player: AVPlayer?
+
     var body: some View {
         VStack {
-            if let image = image {
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if asset.mediaType == .video {
+                if let player = player {
+                    VideoPlayer(player: player)
+                        .onAppear {
+                            player.play()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if let image = image {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             
             HStack {
@@ -45,7 +60,11 @@ struct PhotoDetailView: View {
             }
         }
         .onAppear {
-            loadImage()
+            if asset.mediaType == .video {
+                loadVideo()
+            } else {
+                loadImage()
+            }
         }
     }
     
@@ -67,11 +86,30 @@ struct PhotoDetailView: View {
         }
     }
     
+    private func loadVideo() {
+        let manager = PHImageManager.default()
+        let options = PHVideoRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = true
+        
+        manager.requestPlayerItem(forVideo: asset, options: options) { playerItem, error in
+            if let error = error as? NSError {
+                print("Error loading video: \(error.localizedDescription)")
+                return
+            }
+            if let playerItem = playerItem {
+                DispatchQueue.main.async {
+                    self.player = AVPlayer(playerItem: playerItem)
+                }
+            }
+        }
+    }
+    
     private func getAssetSize() -> String {
         let resources = PHAssetResource.assetResources(for: asset)
         if let resource = resources.first {
             let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong
-            var sizeOnDisk = Int64(bitPattern: UInt64(unsignedInt64!))
+            let sizeOnDisk = Int64(bitPattern: UInt64(unsignedInt64!))
             return ByteCountFormatter.string(fromByteCount: Int64(sizeOnDisk), countStyle: .file)
         }
         return "Unknown"

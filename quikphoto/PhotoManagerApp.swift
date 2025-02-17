@@ -2,10 +2,14 @@ import SwiftUI
 
 @main
 struct PhotoManagerApp: App {
+    @StateObject private var photoLibrary = PhotoLibraryManager()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .frame(minWidth: 800, minHeight: 600)
+                .environmentObject(photoLibrary)
+
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
@@ -21,6 +25,8 @@ struct PhotoManagerApp: App {
                     NotificationCenter.default.post(name: .sortBySize, object: nil)
                 }
                 .keyboardShortcut("S", modifiers: [.command])
+                .disabled(!photoLibrary.isSizeCachingComplete)
+
                 
                 Button("Find Similar Photos") {
                     NotificationCenter.default.post(name: .findSimilar, object: nil)
