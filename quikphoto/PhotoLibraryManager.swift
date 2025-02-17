@@ -43,28 +43,50 @@ class PhotoLibraryManager: ObservableObject {
             DispatchQueue.main.async {
                 self.isSizeCachingComplete = false
             }
-
+            
+            let fileManager = FileManager.default
+            let documentDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let fileURL = documentDirectory.appendingPathComponent("assetSizes.json")
+            
+            // Load existing sizes from file
+            var existingSizes: [String: Int64] = [:]
+            if let data = try? Data(contentsOf: fileURL),
+               let savedSizes = try? JSONDecoder().decode([String: Int64].self, from: data) {
+                existingSizes = savedSizes
+            }
+            
+            var newSizes: [String: Int64] = existingSizes
+            
             for asset in self.assets {
-                let resources = PHAssetResource.assetResources(for: asset)
-                if let resource = resources.first {
-                    var sizeOnDisk: Int64 = 0
-
-                
-                    // Fallback to value(forKey:) method
-                    if let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong {
-                        sizeOnDisk = Int64(bitPattern: UInt64(unsignedInt64))
-                    }
-                
-
-                    if sizeOnDisk > 0 {
-                        DispatchQueue.main.async {
-                            self.assetSizes[asset.localIdentifier] = sizeOnDisk
+                if existingSizes[asset.localIdentifier] == nil {
+                    let resources = PHAssetResource.assetResources(for: asset)
+                    if let resource = resources.first {
+                        var sizeOnDisk: Int64 = 0
+                        
+                        // Fallback to value(forKey:) method
+                        if let unsignedInt64 = resource.value(forKey: "fileSize") as? CLong {
+                            sizeOnDisk = Int64(bitPattern: UInt64(unsignedInt64))
                         }
+                        
+                        if sizeOnDisk > 0 {
+                            newSizes[asset.localIdentifier] = sizeOnDisk
+                            DispatchQueue.main.async {
+                                self.assetSizes[asset.localIdentifier] = sizeOnDisk
+                            }
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self.assetSizes[asset.localIdentifier] = existingSizes[asset.localIdentifier]
                     }
                 }
             }
-
-            // Log total number of cached sizes
+            
+            // Save updated sizes to file
+            if let data = try? JSONEncoder().encode(newSizes) {
+                try? data.write(to: fileURL)
+            }
+            
             DispatchQueue.main.async {
                 self.isSizeCachingComplete = true
             }
