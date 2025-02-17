@@ -26,6 +26,11 @@ struct PhotoManagerApp: App {
                     NotificationCenter.default.post(name: .findSimilar, object: nil)
                 }
                 .keyboardShortcut("F", modifiers: [.command])
+                
+                Button("Sort by Videos") {
+                   NotificationCenter.default.post(name: .sortByVideos, object: nil)
+               }
+               .keyboardShortcut("V", modifiers: [.command])
             }
         }
     }
@@ -34,5 +39,6 @@ struct PhotoManagerApp: App {
 extension Notification.Name {
     static let sortByDate = Notification.Name("sortByDate")
     static let sortBySize = Notification.Name("sortBySize")
+    static let sortByVideos = Notification.Name("sortByVideos")
     static let findSimilar = Notification.Name("findSimilar")
 }

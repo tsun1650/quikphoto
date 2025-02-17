@@ -16,7 +16,7 @@ struct ContentView: View {
             if let asset = selectedAsset {
                 PhotoDetailView(asset: asset, onDelete: deleteAsset)
             } else {
-                Text("Select a photo to view")
+                Text("Select a photo or video to view")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
